@@ -1,0 +1,32 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app: sample-consumer-job
+  name: sample-consumer-job
+spec:
+  parallelism: 3
+  completions: 3
+  backoffLimit: 4
+  template:
+    metadata:
+      labels:
+        app: sample-consumer-job
+    spec:
+      restartPolicy: OnFailure
+      activeDeadlineSeconds: 600
+      containers:
+      - name: sample-consumer
+        image: strimzi/hello-world-consumer:latest
+        env:
+          - name: BOOTSTRAP_SERVERS
+            value: demo-cluster-kafka-bootstrap:9092
+          - name: TOPIC
+            value: greetings
+          - name: GROUP_ID
+            value: sample-consumer
+          - name: LOG_LEVEL
+            value: "INFO"
+          - name: MESSAGE_COUNT
+            value: "333"

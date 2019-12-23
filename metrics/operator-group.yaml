@@ -1,0 +1,9 @@
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: strimzi-demo-og
+  namespace: strimzi-demo
+spec:
+  targetNamespaces:
+  - strimzi-demo

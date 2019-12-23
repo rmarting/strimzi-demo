@@ -1,0 +1,36 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app: sample-ssl-producer-job
+  name: sample-ssl-producer-job
+spec:
+  completions: 1
+  backoffLimit: 4
+  template:
+    metadata:
+      labels:
+        app: sample-ssl-producer-job
+    spec:
+      restartPolicy: OnFailure
+      activeDeadlineSeconds: 300
+      containers:
+      - name: sample-ssl-producer
+        image: strimzi/hello-world-producer:latest
+        env:
+          - name: CA_CRT
+            valueFrom:
+              secretKeyRef:
+                name: demo-cluster-cluster-ca-cert
+                key: ca.crt
+          - name: BOOTSTRAP_SERVERS
+            value: demo-cluster-kafka-bootstrap:9093
+          - name: TOPIC
+            value: greetings
+          - name: DELAY_MS
+            value: "100"
+          - name: LOG_LEVEL
+            value: "INFO"
+          - name: MESSAGE_COUNT
+            value: "999"
