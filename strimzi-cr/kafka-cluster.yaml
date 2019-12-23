@@ -204,3 +204,12 @@ spec:
       reconciliationIntervalSeconds: 60
     userOperator:
       reconciliationIntervalSeconds: 60
+  kafkaExporter:
+    topicRegex: ".*"
+    groupRegex: ".*"
+    readinessProbe:
+      initialDelaySeconds: 15
+      timeoutSeconds: 5
+    livenessProbe:
+      initialDelaySeconds: 15
+      timeoutSeconds: 5
