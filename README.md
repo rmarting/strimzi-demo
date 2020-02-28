@@ -130,6 +130,7 @@ deploy it as:
 ```bash
 oc apply -f metrics/grafana/grafana-dashboard-strimzi-kafka.yaml
 oc apply -f metrics/grafana/grafana-dashboard-strimzi-zookeeper.yaml
+oc apply -f metrics/grafana/grafana-dashboard-strimzi-kafka-exporter.yaml
 ```
 
 To get the route to access Grafana:
@@ -246,3 +247,7 @@ be similar to:
 The Zookeeper Dashboard could be similar to:
 
 ![Apache Zookeeper Dashboard in Grafana](./img/grafana-zookeeper-dashboard.png)
+
+The Kafka Exporter Dashboard could be similar to:
+
+![Apache Kafka Exporter Dashboard in Grafana](./img/grafana-kafka-exporter-dashboard.png)
