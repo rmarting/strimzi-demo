@@ -6,8 +6,25 @@ metadata:
   name: greetings
 spec:
   config:
+    # When a producer sets acks to "all" (or "-1"), this configuration specifies the minimum
+    # number of replicas that must acknowledge a write for the write to be considered successful. 
+    # If this minimum cannot be met, then the producer will raise an exception
+    # (either NotEnoughReplicas or NotEnoughReplicasAfterAppend). When used together, min.insync.replicas
+    # and acks allow you to enforce greater durability guarantees. A typical scenario would be to
+    # create a topic with a replication factor of 3, set min.insync.replicas to 2, and produce
+    # with acks of "all". This will ensure that the producer raises an exception\
+    # if a majority of replicas do not receive a write.
     min.insync.replicas: "2"
+    # This configuration controls the maximum time we will retain a log before we
+    # will discard old log segments to free up space if we are using the "delete"
+    # retention policy. This represents an SLA on how soon consumers must read
+    # their data. If set to -1, no time limit is applied.
+    # Value: 2 hours
     retention.ms: 7200000
+    # This configuration controls the segment file size for the log. Retention and
+    # cleaning is always done a file at a time so a larger segment size means fewer
+    # files but less granular control over retention.
+    # Value: 1Gb
     segment.bytes: 1073741824
   partitions: 3
   replicas: 2

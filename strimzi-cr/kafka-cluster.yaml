@@ -6,7 +6,7 @@ metadata:
     app: demo-cluster
 spec:
   kafka:
-    version: 2.3.0
+    version: 2.4.0
     config:
       # default replication factors for automatically created topics
       default.replication.factor: 1
@@ -38,8 +38,13 @@ spec:
       log.cleaner.enable: true
       # How long are delete records retained?. Default value: 86400000 (24 hours)
       log.cleaner.delete.retention.ms: 86400000
-      # 
-      log.message.format.version: "2.3"
+      # Specify the message format version the broker will use to append messages to the logs.
+      # The value should be a valid ApiVersion. Some examples are: 0.8.2, 0.9.0.0, 0.10.0, check
+      # ApiVersion for more details. By setting a particular message format version, the user 
+      # is certifying that all the existing messages on disk are smaller or equal than the specified version.
+      # Setting this value incorrectly will cause consumers with older versions to break as they will
+      # receive messages with a format that they don't understand. 
+      log.message.format.version: "2.4"
     jvmOptions:
       "-Xms": "2g"
       "-Xmx": "2g"
@@ -71,6 +76,20 @@ spec:
         labels:
           clientId: "$3"
           broker: "$4:$5"
+      # Some percent metrics use MeanRate attribute
+      # Ex) kafka.server<type=(KafkaRequestHandlerPool), name=(RequestHandlerAvgIdlePercent)><>MeanRate
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)Percent\w*><>MeanRate
+        name: kafka_$1_$2_$3_percent
+        type: GAUGE
+      # Generic gauges for percents
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)Percent\w*><>Value
+        name: kafka_$1_$2_$3_percent
+        type: GAUGE
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)Percent\w*, (.+)=(.+)><>Value
+        name: kafka_$1_$2_$3_percent
+        type: GAUGE
+        labels:
+          "$4": "$5"
       # Generic per-second counters with 0-2 key/value pairs
       - pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*, (.+)=(.+), (.+)=(.+)><>Count
         name: kafka_$1_$2_$3_total
@@ -102,7 +121,6 @@ spec:
         name: kafka_$1_$2_$3
         type: GAUGE
       # Emulate Prometheus 'Summary' metrics for the exported 'Histogram's.
-      #
       # Note that these are missing the '_sum' metric!
       - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+), (.+)=(.+)><>Count
         name: kafka_$1_$2_$3_count
@@ -135,7 +153,7 @@ spec:
         name: kafka_$1_$2_$3
         type: GAUGE
         labels:
-          quantile: "0.$4"      
+          quantile: "0.$4"
     readinessProbe:
       initialDelaySeconds: 30
       timeoutSeconds: 5
@@ -165,9 +183,9 @@ spec:
       initialDelaySeconds: 30
       timeoutSeconds: 5
     metrics:
-      lowercaseOutputName: true
       # Inspired by Zookeeper rules
       # https://github.com/prometheus/jmx_exporter/blob/master/example_configs/zookeeper.yaml
+      lowercaseOutputName: true
       rules:
       # replicated Zookeeper
       - pattern: "org.apache.ZooKeeperService<name0=ReplicatedServer_id(\\d+)><>(\\w+)"
