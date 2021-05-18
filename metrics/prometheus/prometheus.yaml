@@ -1,3 +1,4 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -52,9 +53,10 @@ metadata:
 spec:
   replicas: 1
   serviceAccountName: prometheus-server
-  serviceMonitorSelector:
+  podMonitorSelector:
     matchLabels:
       app: strimzi
+  serviceMonitorSelector: {}
   resources:
     requests:
       memory: 400Mi
@@ -71,22 +73,6 @@ spec:
   additionalScrapeConfigs:
     name: additional-scrape-configs
     key: prometheus-additional.yaml
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: prometheus
-  labels:
-    app: strimzi
-spec:
-  ports:
-    - name: prometheus
-      port: 9090
-      targetPort: 9090
-      protocol: TCP
-  selector:
-    prometheus: prometheus
-  type: ClusterIP
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
