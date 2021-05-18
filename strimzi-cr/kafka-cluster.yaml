@@ -1,12 +1,12 @@
-apiVersion: kafka.strimzi.io/v1beta1
+apiVersion: kafka.strimzi.io/v1beta2
 kind: Kafka
 metadata:
-  name: demo-cluster
+  name: demo
   labels:
-    app: demo-cluster
+    app: demo
 spec:
   kafka:
-    version: 2.4.0
+    version: 2.7.0
     config:
       # default replication factors for automatically created topics
       default.replication.factor: 1
@@ -44,137 +44,73 @@ spec:
       # is certifying that all the existing messages on disk are smaller or equal than the specified version.
       # Setting this value incorrectly will cause consumers with older versions to break as they will
       # receive messages with a format that they don't understand. 
-      log.message.format.version: "2.4"
+      log.message.format.version: "2.7"
     jvmOptions:
       "-Xms": "2g"
       "-Xmx": "2g"
+    authorization:
+      type: simple
     listeners:
-      plain: {}
-      tls: {}
-      # Exposing Kafka using OCP Routes
-      external:
-        type: route
+    - name: plain
+      port: 9092
+      tls: false
+      type: internal
+      authentication:
+        type: scram-sha-512
+    - name: tls
+      port: 9093
+      tls: true
+      type: internal
+      authentication:
+        type: tls
+    - name: external
+      port: 9094
+      tls: true
+      type: route
+      authentication:
+        type: tls
     livenessProbe:
       initialDelaySeconds: 30
       timeoutSeconds: 5
-    metrics:
-      # Inspired by config from Kafka 2.0.0 example rules:
-      # https://github.com/prometheus/jmx_exporter/blob/master/example_configs/kafka-2_0_0.yml
-      lowercaseOutputName: true
-      rules:
-      # Special cases and very specific rules
-      - pattern : kafka.server<type=(.+), name=(.+), clientId=(.+), topic=(.+), partition=(.*)><>Value
-        name: kafka_server_$1_$2
-        type: GAUGE
-        labels:
-          clientId: "$3"
-          topic: "$4"
-          partition: "$5"
-      - pattern : kafka.server<type=(.+), name=(.+), clientId=(.+), brokerHost=(.+), brokerPort=(.+)><>Value
-        name: kafka_server_$1_$2
-        type: GAUGE
-        labels:
-          clientId: "$3"
-          broker: "$4:$5"
-      # Some percent metrics use MeanRate attribute
-      # Ex) kafka.server<type=(KafkaRequestHandlerPool), name=(RequestHandlerAvgIdlePercent)><>MeanRate
-      - pattern: kafka.(\w+)<type=(.+), name=(.+)Percent\w*><>MeanRate
-        name: kafka_$1_$2_$3_percent
-        type: GAUGE
-      # Generic gauges for percents
-      - pattern: kafka.(\w+)<type=(.+), name=(.+)Percent\w*><>Value
-        name: kafka_$1_$2_$3_percent
-        type: GAUGE
-      - pattern: kafka.(\w+)<type=(.+), name=(.+)Percent\w*, (.+)=(.+)><>Value
-        name: kafka_$1_$2_$3_percent
-        type: GAUGE
-        labels:
-          "$4": "$5"
-      # Generic per-second counters with 0-2 key/value pairs
-      - pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*, (.+)=(.+), (.+)=(.+)><>Count
-        name: kafka_$1_$2_$3_total
-        type: COUNTER
-        labels:
-          "$4": "$5"
-          "$6": "$7"
-      - pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*, (.+)=(.+)><>Count
-        name: kafka_$1_$2_$3_total
-        type: COUNTER
-        labels:
-          "$4": "$5"
-      - pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*><>Count
-        name: kafka_$1_$2_$3_total
-        type: COUNTER
-      # Generic gauges with 0-2 key/value pairs
-      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+), (.+)=(.+)><>Value
-        name: kafka_$1_$2_$3
-        type: GAUGE
-        labels:
-          "$4": "$5"
-          "$6": "$7"
-      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+)><>Value
-        name: kafka_$1_$2_$3
-        type: GAUGE
-        labels:
-          "$4": "$5"
-      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>Value
-        name: kafka_$1_$2_$3
-        type: GAUGE
-      # Emulate Prometheus 'Summary' metrics for the exported 'Histogram's.
-      # Note that these are missing the '_sum' metric!
-      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+), (.+)=(.+)><>Count
-        name: kafka_$1_$2_$3_count
-        type: COUNTER
-        labels:
-          "$4": "$5"
-          "$6": "$7"
-      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.*), (.+)=(.+)><>(\d+)thPercentile
-        name: kafka_$1_$2_$3
-        type: GAUGE
-        labels:
-          "$4": "$5"
-          "$6": "$7"
-          quantile: "0.$8"
-      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+)><>Count
-        name: kafka_$1_$2_$3_count
-        type: COUNTER
-        labels:
-          "$4": "$5"
-      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.*)><>(\d+)thPercentile
-        name: kafka_$1_$2_$3
-        type: GAUGE
-        labels:
-          "$4": "$5"
-          quantile: "0.$6"
-      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>Count
-        name: kafka_$1_$2_$3_count
-        type: COUNTER
-      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>(\d+)thPercentile
-        name: kafka_$1_$2_$3
-        type: GAUGE
-        labels:
-          quantile: "0.$4"
     readinessProbe:
       initialDelaySeconds: 30
       timeoutSeconds: 5
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-metrics
+          key: kafka-metrics-config.yml    
     replicas: 3
     storage:
+      #type: ephemeral
       type: jbod
       volumes:
       - id: 0
         type: persistent-claim
-        size: 50Gi
+        size: 25Gi
         deleteClaim: true
       - id: 1
         type: persistent-claim
-        size: 50Gi
+        size: 25Gi
         deleteClaim: true
     template:
       pod:
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                  - key: strimzi.io/name
+                    operator: In
+                    values:
+                    - demo-kafka
+                topologyKey: kubernetes.io/hostname
+              weight: 1
         metadata:
           labels:
-            custom-strimzi-label: demo-cluster
-          terminationGracePeriodSeconds: 120
+            custom-strimzi-label: demo-kafka-cluster
   zookeeper:
     jvmOptions:
       "-Xms": "512m"
@@ -182,46 +118,50 @@ spec:
     livenessProbe:
       initialDelaySeconds: 30
       timeoutSeconds: 5
-    metrics:
-      # Inspired by Zookeeper rules
-      # https://github.com/prometheus/jmx_exporter/blob/master/example_configs/zookeeper.yaml
-      lowercaseOutputName: true
-      rules:
-      # replicated Zookeeper
-      - pattern: "org.apache.ZooKeeperService<name0=ReplicatedServer_id(\\d+)><>(\\w+)"
-        name: "zookeeper_$2"
-      - pattern: "org.apache.ZooKeeperService<name0=ReplicatedServer_id(\\d+), name1=replica.(\\d+)><>(\\w+)"
-        name: "zookeeper_$3"
-        labels:
-          replicaId: "$2"
-      - pattern: "org.apache.ZooKeeperService<name0=ReplicatedServer_id(\\d+), name1=replica.(\\d+), name2=(\\w+)><>(\\w+)"
-        name: "zookeeper_$4"
-        labels:
-          replicaId: "$2"
-          memberType: "$3"
-      - pattern: "org.apache.ZooKeeperService<name0=ReplicatedServer_id(\\d+), name1=replica.(\\d+), name2=(\\w+), name3=(\\w+)><>(\\w+)"
-        name: "zookeeper_$4_$5"
-        labels:
-          replicaId: "$2"
-          memberType: "$3"
-      # standalone Zookeeper
-      - pattern: "org.apache.ZooKeeperService<name0=StandaloneServer_port(\\d+)><>(\\w+)"
-        name: "zookeeper_$2"
-      - pattern: "org.apache.ZooKeeperService<name0=StandaloneServer_port(\\d+), name1=(InMemoryDataTree)><>(\\w+)"
-        name: "zookeeper_$2_$3"
     readinessProbe:
       initialDelaySeconds: 60
       timeoutSeconds: 5
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-metrics
+          key: zookeeper-metrics-config.yml
     replicas: 3
     storage:
       type: persistent-claim
       size: 25Gi
       deleteClaim: true
+    template:
+      pod:
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                  - key: strimzi.io/name
+                    operator: In
+                    values:
+                    - demo-zookeeper
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        metadata:
+          labels:
+            custom-strimzi-label: demo-zookeeper-cluster
   entityOperator:
     topicOperator:
       reconciliationIntervalSeconds: 60
     userOperator:
       reconciliationIntervalSeconds: 60
+  clientsCa:
+    generateCertificateAuthority: true
+    renewalDays: 30
+    validityDays: 1460
+  clusterCa:
+    generateCertificateAuthority: true
+    renewalDays: 30
+    validityDays: 1460      
   kafkaExporter:
     topicRegex: ".*"
     groupRegex: ".*"
@@ -231,3 +171,17 @@ spec:
     livenessProbe:
       initialDelaySeconds: 15
       timeoutSeconds: 5
+  cruiseControl:
+    #brokerCapacity:
+    #  inboundNetwork: 10000KB/s
+    #  outboundNetwork: 10000KB/s
+    #config:
+    #  hard.goals: >
+    #    com.linkedin.kafka.cruisecontrol.analyzer.goals.NetworkInboundCapacityGoal,
+    #    com.linkedin.kafka.cruisecontrol.analyzer.goals.NetworkOutboundCapacityGoal    
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: cruise-control-metrics
+          key: metrics-config.yml    

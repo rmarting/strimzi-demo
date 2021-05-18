@@ -1,0 +1,40 @@
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaUser
+metadata:
+  name: user-demo
+  labels:
+    strimzi.io/cluster: demo
+spec:
+  authentication:
+    type: tls
+  authorization:
+    type: simple
+    acls:
+      # Consumer ACLs for greetings topic using consumer group my-demo-group
+      - resource:
+          type: group
+          name: my-demo-group
+          patternType: literal
+        operation: Read
+      # Consumer ACLs
+      - resource:
+          type: topic
+          name: greetings
+          patternType: literal
+        operation: Read
+      - resource:
+          type: topic
+          name: greetings
+          patternType: prefix
+        operation: Describe
+      # Producer ACLs for greetings topic
+      - resource:
+          type: topic
+          name: greetings
+          patternType: literal
+        operation: Write
+      - resource:
+          type: topic
+          name: greetings
+          patternType: literal
+        operation: Create

@@ -1,8 +1,8 @@
-apiVersion: kafka.strimzi.io/v1beta1
+apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
 metadata:
   labels:
-    strimzi.io/cluster: demo-cluster
+    strimzi.io/cluster: demo
   name: greetings
 spec:
   config:
